@@ -32,8 +32,7 @@ import * as HttpUtil from '../utils/request.js'
             "X-VTEX-API-AppToken": this.appToken
           }
         }
-      )
-          
+      ) 
       return  response.data
 
     } catch (error) {
@@ -43,7 +42,35 @@ import * as HttpUtil from '../utils/request.js'
       
       throw new ServerError( error )
     }
+  }
 
+  async  updateByDocId (combinations, topCombinations) {
+    try{
+      const response = await this.request.patch(
+        `http://${this.accountName}.${this.environment}.com/api/dataentities/${this.entityName}/documents/${this.docId}`,
+        {
+          combinations,
+          topCombinations
+        },
+        {
+          headers: 
+          {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-VTEX-API-AppKey": this.appKey,
+            "X-VTEX-API-AppToken": this.appToken
+          }
+        }
+      ) 
+      return  response.status
+
+    } catch (error) {
+      const err = this.request.isRequestError(error)
+      if ( err ) 
+        throw  new RequestError( error )
+      
+      throw new ServerError( error )
+    }
   }
 }
 
