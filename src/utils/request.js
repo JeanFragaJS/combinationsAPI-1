@@ -16,6 +16,10 @@ export class Request {
     return this.request.post(url, data, config);
   }
 
+  patch ( url, data, config ) {
+    return this.request.patch(url, data, config);
+  }
+
   delete (url, config = {} ) {
     return this.request.delete(url, config);
   }
