@@ -1,5 +1,8 @@
 import axios from 'axios';
-import mergeSort from '../../services/protocols/MergeSort.js';
+import { Db } from '../../infra/db.js'
+import { GetOrder } from '../../clients/index.js'
+import mergeSort from '../../services/protocols/merge-sort.js';
+
 export default new class CombinationController {
 
     async store(req, res) {  //Método para receber hook config + Criar combinação de acordo com o pedido recebido
@@ -9,12 +12,24 @@ export default new class CombinationController {
 
         if (!State) //verifica se a váriavel estado foi passada no body da requisição
             return res.status(400).json({ "error": "Bad Request" }); //envia um erro informando requisição inválida
-
-        const { data :{items}} = await axios.get(`https://${process.env.ACCOUNT_NAME}.${process.env.ENVIROMENT}.com/api/oms/pvt/orders/${OrderId}`,
-            { headers: { "X-VTEX-API-AppKey": process.env.X_VTEX_API_APP_KEY, "X-VTEX-API-AppToken": process.env.X_VTEX_API_APP_TOKEN } }); //getOrderById captura informação do pedido pelo número do pedido
+        /*
+          ACCESS CLIENT ORDER ID 
+        */    
+        const getOrder = new GetOrder()
+        const {data :{items}} = await getOrder.byId(OrderId)
+        // const { data :{items}} = await axios.get(`https://${process.env.ACCOUNT_NAME}.${process.env.ENVIROMENT}.com/api/oms/pvt/orders/${OrderId}`,
+        //     { headers: { "X-VTEX-API-AppKey": process.env.X_VTEX_API_APP_KEY, "X-VTEX-API-AppToken": process.env.X_VTEX_API_APP_TOKEN } }); //getOrderById captura informação do pedido pelo número do pedido
+        
+        /*
+          ACCESS CLIENT MASTERDATA [GET]
+        */
         const NUMBER_OF_TOP_COMBINATIONS = 3; //pegar do masterdata também?
-        let { data :{combinations, topCombinations} } = await axios.get(`https://${process.env.ACCOUNT_NAME}.${process.env.ENVIROMENT}.com/api/dataentities/${process.env.DATA_ENTITY_NAME}/documents/${process.env.MASTERDATA_DOCUMENT_ID}?_fields=combinations,topCombinations`,
-            { headers: { "X-VTEX-API-AppKey": process.env.X_VTEX_API_APP_KEY, "X-VTEX-API-AppToken": process.env.X_VTEX_API_APP_TOKEN } });; //MasterDataget
+        const  db = new Db()
+        let { data :{combinations, topCombinations} } = await db.getDocByFields()
+        // let { data :{combinations, topCombinations} } = await axios.get(`https://${process.env.ACCOUNT_NAME}.${process.env.ENVIROMENT}.com/api/dataentities/${process.env.DATA_ENTITY_NAME}/documents/${process.env.MASTERDATA_DOCUMENT_ID}?_fields=combinations,topCombinations`,
+        //     { headers: { "X-VTEX-API-AppKey": process.env.X_VTEX_API_APP_KEY, "X-VTEX-API-AppToken": process.env.X_VTEX_API_APP_TOKEN } });; //MasterDataget
+
+
 
         const addTopCombination = (obj) => { //método para atualizar o vetor de melhores combinacoes
             console.log("tentaram add o obj = ",obj);
@@ -83,15 +98,21 @@ export default new class CombinationController {
             }
         }
 
+        /*
+          ACCESS CLIENT MASTERDATA [PATCH]
+        */
+         const status = await db.updateByDocId(combinations, topCombinations)
         //Fazendo update no masterdata
-        let responseUpdate = await axios.patch(`https://${process.env.ACCOUNT_NAME}.${process.env.ENVIROMENT}.com/api/dataentities/${process.env.DATA_ENTITY_NAME}/documents/${process.env.MASTERDATA_DOCUMENT_ID}`,
-            {
-                combinations,
-                topCombinations
-            },
-            {
-                headers: { "X-VTEX-API-AppKey": process.env.X_VTEX_API_APP_KEY, "X-VTEX-API-AppToken": process.env.X_VTEX_API_APP_TOKEN }
-            });
-        res.status(responseUpdate.status).json({ "Response": "Ok - User's Orders Updated" });
+        // let responseUpdate = await axios.patch(`https://${process.env.ACCOUNT_NAME}.${process.env.ENVIROMENT}.com/api/dataentities/${process.env.DATA_ENTITY_NAME}/documents/${process.env.MASTERDATA_DOCUMENT_ID}`,
+        //     {
+        //         combinations,
+        //         topCombinations
+        //     },
+        //     {
+        //         headers: { "X-VTEX-API-AppKey": process.env.X_VTEX_API_APP_KEY, "X-VTEX-API-AppToken": process.env.X_VTEX_API_APP_TOKEN }
+        //     });
+        //res.status(responseUpdate.status).json({ "Response": "Ok - User's Orders Updated" });
+          res.status(status).json({ "Response": "Ok - User's Orders Updated" });
+
     }
 }
